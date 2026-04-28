@@ -38,11 +38,13 @@ def process_query(query, deals, work_orders):
 
     df = deals.copy()
 
-    # VALID KEYWORDS
+    # ---- VALID KEYWORDS ---- #
     keywords = ["energy", "won", "lost", "quarter"]
 
     if not any(word in query for word in keywords):
         return pd.DataFrame(), 0, 0
+
+    # ---- FILTERS ---- #
 
     # Sector filter
     if "energy" in query and 'sector' in df.columns:
@@ -55,23 +57,32 @@ def process_query(query, deals, work_orders):
     if "lost" in query and 'status' in df.columns:
         df = df[df['status'].astype(str).str.contains("lost", case=False, na=False)]
 
-    # Quarter handling
+    # ---- QUARTER HANDLING ---- #
+
     if "quarter" in query:
 
+        # Case 1: ONLY "quarter"
         if query.strip() == "quarter":
             for col in df.columns:
                 if "date" in col and pd.api.types.is_datetime64_any_dtype(df[col]):
                     df['quarter'] = df[col].dt.to_period('Q').astype(str)
             return df, 0, len(df)
 
+        # Case 2: Filter current quarter (with fallback)
         else:
             current_q = (datetime.now().month - 1) // 3 + 1
+            temp_df = df.copy()
 
             for col in df.columns:
                 if "date" in col and pd.api.types.is_datetime64_any_dtype(df[col]):
-                    df = df[df[col].dt.quarter == current_q]
+                    temp_df = temp_df[temp_df[col].dt.quarter == current_q]
 
-    # Metrics
+            # If no data → fallback to original df
+            if not temp_df.empty:
+                df = temp_df
+
+    # ---- METRICS ---- #
+
     value_col = None
     for col in df.columns:
         if "value" in col or "amount" in col:
@@ -86,6 +97,7 @@ def process_query(query, deals, work_orders):
 
 def generate_insights(df, total_value, count):
 
+    # Quarter grouping case
     if 'quarter' in df.columns and total_value == 0:
         summary = df['quarter'].value_counts().to_string()
         return f"""
@@ -94,6 +106,7 @@ def generate_insights(df, total_value, count):
 {summary}
 """
 
+    # No results
     if df.empty:
         return "🤖 Please ask a meaningful business query like 'energy deals this quarter' or 'won deals'."
 
