@@ -1,0 +1,5 @@
+id,sector,deal_value,date,status
+1,Energy,50000,2024-01-12,Won
+2,Energy,70000,2024-02-15,Won
+3,IT,30000,2024-03-10,Lost
+4,Healthcare,45000,2024-01-20,Won
